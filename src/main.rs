@@ -100,25 +100,74 @@ impl MerkleTree {
 
         return self.build_merkle_tree(output_pairs);
     }
-}
 
-fn print_tree(root: Option<Box<MerkelNode>>) {
-    fn print_tree_helper(node: &Option<Box<MerkelNode>>, prefix: String, is_left: bool) {
-        if let Some(ref node) = node {
-            println!(
-                "{}{}{}",
-                prefix,
-                if is_left { "├──" } else { "└──" },
-                reduce_string(node.data.clone())
-            );
+    fn get_proof(&self, data: &str) -> Option<Vec<String>> {
+        fn get_proof_helper(node: &MerkelNode, data: &str, proof: &mut Vec<String>) -> bool {
+            if node.left.is_none() && node.right.is_none() {
+                return node.data == sha256_hash(data);
+            }
 
-            let new_prefix = format!("{}{}", prefix, if is_left { "│   " } else { "    " });
-            print_tree_helper(&node.left, new_prefix.clone(), true);
-            print_tree_helper(&node.right, new_prefix, false);
+            if let Some(ref left) = node.left {
+                if get_proof_helper(left, data, proof) {
+                    if let Some(ref right) = node.right {
+                        proof.push(right.data.clone());
+                    }
+                    return true;
+                }
+            }
+
+            if let Some(ref right) = node.right {
+                if get_proof_helper(right, data, proof) {
+                    if let Some(ref left) = node.left {
+                        proof.push(left.data.clone());
+                    }
+                    return true;
+                }
+            }
+
+            false
+        }
+
+        let mut proof = Vec::new();
+        if get_proof_helper(&self.root, data, &mut proof) {
+            Some(proof)
+        } else {
+            None
         }
     }
 
-    print_tree_helper(&root, String::new(), false);
+    fn verify_proof(&self, data: &str, proof: &[String]) -> bool {
+        let mut current_hash = sha256_hash(data);
+
+        for sibling in proof {
+            let mut concat_string = current_hash.clone();
+            concat_string.push_str(sibling);
+            current_hash = sha256_hash(concat_string);
+        }
+
+        current_hash == self.root.data
+    }
+}
+
+fn print_tree(tree: &MerkleTree) {
+    fn print_tree_helper(node: &MerkelNode, prefix: String, is_left: bool) {
+        println!(
+            "{}{}{}",
+            prefix,
+            if is_left { "├──" } else { "└──" },
+            reduce_string(node.data.clone())
+        );
+
+        let new_prefix = format!("{}{}", prefix, if is_left { "│   " } else { "    " });
+        if let Some(ref left) = node.left {
+            print_tree_helper(left, new_prefix.clone(), true);
+        }
+        if let Some(ref right) = node.right {
+            print_tree_helper(right, new_prefix, false);
+        }
+    }
+
+    print_tree_helper(&tree.root, String::new(), false);
 }
 
 fn reduce_string(input: String) -> String {
@@ -129,6 +178,7 @@ fn reduce_string(input: String) -> String {
 
     return output;
 }
+
 fn main() {
     let mut merkle_tree = MerkleTree::new();
 
@@ -145,5 +195,23 @@ fn main() {
 
     merkle_tree.create(&mut data);
 
-    print_tree(Some(merkle_tree.root));
+    print_tree(&merkle_tree);
+
+    let proof = merkle_tree.get_proof("c");
+    if let Some(proof) = proof {
+        println!("Inclusion proof for 'c': {:?}", proof);
+        let is_valid = merkle_tree.verify_proof("c", &proof);
+        println!("Is the proof valid? {}", is_valid);
+    } else {
+        println!("Data 'c' not found in the tree");
+    }
+
+    let exclusion_proof = merkle_tree.get_proof("x");
+    if let Some(proof) = exclusion_proof {
+        println!("Exclusion proof for 'x': {:?}", proof);
+        let is_valid = merkle_tree.verify_proof("x", &proof);
+        println!("Is the exclusion proof valid? {}", is_valid);
+    } else {
+        println!("Data 'x' is not in the tree (as expected)");
+    }
 }
