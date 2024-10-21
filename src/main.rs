@@ -180,38 +180,47 @@ fn reduce_string(input: String) -> String {
 }
 
 fn main() {
-    let mut merkle_tree = MerkleTree::new();
+}
 
-    let mut data = vec![
-        "a".to_owned(),
-        "b".to_owned(),
-        "c".to_owned(),
-        "d".to_owned(),
-        "e".to_owned(),
-        "f".to_owned(),
-        "g".to_owned(),
-        "h".to_owned(),
-    ];
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-    merkle_tree.create(&mut data);
+    #[test]
+    fn test_merkle_tree() {
+        let mut merkle_tree = MerkleTree::new();
 
-    print_tree(&merkle_tree);
-
-    let proof = merkle_tree.get_proof("c");
-    if let Some(proof) = proof {
-        println!("Inclusion proof for 'c': {:?}", proof);
-        let is_valid = merkle_tree.verify_proof("c", &proof);
-        println!("Is the proof valid? {}", is_valid);
-    } else {
-        println!("Data 'c' not found in the tree");
-    }
-
-    let exclusion_proof = merkle_tree.get_proof("x");
-    if let Some(proof) = exclusion_proof {
-        println!("Exclusion proof for 'x': {:?}", proof);
-        let is_valid = merkle_tree.verify_proof("x", &proof);
-        println!("Is the exclusion proof valid? {}", is_valid);
-    } else {
-        println!("Data 'x' is not in the tree (as expected)");
+        let mut data = vec![
+            "a".to_owned(),
+            "b".to_owned(),
+            "c".to_owned(),
+            "d".to_owned(),
+            "e".to_owned(),
+            "f".to_owned(),
+            "g".to_owned(),
+            "h".to_owned(),
+        ];
+    
+        merkle_tree.create(&mut data);
+    
+        print_tree(&merkle_tree);
+    
+        let proof = merkle_tree.get_proof("c");
+        if let Some(proof) = proof {
+            println!("Inclusion proof for 'c': {:?}", proof);
+            let is_valid = merkle_tree.verify_proof("c", &proof);
+            println!("Is the proof valid? {}", is_valid);
+        } else {
+            println!("Data 'c' not found in the tree");
+        }
+    
+        let exclusion_proof = merkle_tree.get_proof("x");
+        if let Some(proof) = exclusion_proof {
+            println!("Exclusion proof for 'x': {:?}", proof);
+            let is_valid = merkle_tree.verify_proof("x", &proof);
+            println!("Is the exclusion proof valid? {}", is_valid);
+        } else {
+            println!("Data 'x' is not in the tree (as expected)");
+        }
     }
 }
